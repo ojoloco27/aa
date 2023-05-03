@@ -1,32 +1,267 @@
-# Prerequisites
-*.d
+#include <iostream>
+#include <string>
+#include <vector>
+#include <random>
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
+using namespace std;
 
-# Precompiled Headers
-*.gch
-*.pch
+// Clase para representar un vehículo
+class Vehicle {
+private:
+    string model;
+    string color;
+    string wheels;
+    int level;
+    int experience;
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
+public:
+    Vehicle(string model, string color, string wheels) {
+        this->model = model;
+        this->color = color;
+        this->wheels = wheels;
+        level = 1;
+        experience = 0;
+    }
 
-# Fortran module files
-*.mod
-*.smod
+    string getModel() {
+        return model;
+    }
 
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
+    string getColor() {
+        return color;
+    }
 
-# Executables
-*.exe
-*.out
-*.app
+    string getWheels() {
+        return wheels;
+    }
+
+    int getLevel() {
+        return level;
+    }
+
+    int getExperience() {
+        return experience;
+    }
+
+    void addExperience(int exp) {
+        experience += exp;
+        if (experience >= level * 100) {
+            level++;
+            cout << "¡Has subido de nivel! Ahora eres nivel " << level << endl;
+        }
+    }
+};
+
+// Clase para representar una pelota
+class Ball {
+private:
+    float x;
+    float y;
+    float z;
+    float vx;
+    float vy;
+    float vz;
+
+public:
+    Ball() {
+        x = 0;
+        y = 0;
+        z = 0;
+        vx = 0;
+        vy = 0;
+        vz = 0;
+    }
+
+    float getX() {
+        return x;
+    }
+
+    float getY() {
+        return y;
+    }
+
+    float getZ() {
+        return z;
+    }
+
+    void setX(float x) {
+        this->x = x;
+    }
+
+    void setY(float y) {
+        this->y = y;
+    }
+
+    void setZ(float z) {
+        this->z = z;
+    }
+
+    void setVelocity(float vx, float vy, float vz) {
+        this->vx = vx;
+        this->vy = vy;
+        this->vz = vz;
+    }
+
+    void updatePosition(float dt) {
+        x += vx * dt;
+        y += vy * dt;
+        z += vz * dt;
+    }
+};
+
+// Clase para representar el campo de juego
+class Field {
+private:
+    int scoreTeam1;
+    int scoreTeam2;
+    vector<float> boostPadsX;
+    vector<float> boostPadsY;
+    vector<float> boostPadsZ;
+
+public:
+    Field() {
+        scoreTeam1 = 0;
+        scoreTeam2 = 0;
+
+        // Generar ubicaciones aleatorias para los boost pads
+        random_device rd;
+        mt19937 gen(rd());
+        uniform_real_distribution<float> distrib(-500, 500);
+        for (int i = 0; i < 100; i++) {
+            boostPadsX.push_back(distrib(gen));
+            boostPadsY.push_back(distrib(gen));
+            boostPadsZ.push_back(50);
+        }
+    }
+
+    int getScoreTeam1() {
+        return scoreTeam1;
+    }
+
+    int getScoreTeam2() {
+        return scoreTeam2;
+    }
+
+    void scoreGoal(int team) {
+        if (team == 1) {
+            scoreTeam1++;
+            cout << "¡Gol del Equipo 1!" << endl;
+        } else if (team == 2) {
+            scoreTeam2++;
+            cout << "¡Gol del Equipo 2!" << endl;
+        }
+    }
+
+    bool isGoal(float x, float y, float z) {
+        if (z > 100) {
+            // La pelota está en el aire, no puede ser gol
+            return false;
+        }
+
+        if (x >= -200 && x <= 200 && y >= -3500 && y <= 3500) {
+            // La pelota está dentro de la portería
+            return true;
+        }
+
+        return false;
+    }
+
+    bool isBoostPad(float x, float y, float z) {
+        for (int i = 0; i < boostPadsX.size(); i++) {
+            float dx = x - boostPadsX[i];
+            float dy = y - boostPadsY[i];
+            float dz = z - boostPadsZ[i];
+            float dist = sqrt(dx*dx + dy*dy + dz*dz);
+            if (dist < 200) {
+                // El vehículo está cerca de este boost pad
+                boostPadsX[i] = distrib(gen);
+                boostPadsY[i] = distrib(gen);
+                boostPadsZ[i] = 50;
+                return true;
+            }
+        }
+        return false;
+    }
+};
+
+// Función para actualizar la posición de la cámara
+void updateCamera(float& cx, float& cy, float& cz, float& tx, float& ty, float& tz, Vehicle& vehicle, Ball& ball) {
+    // Cámara predeterminada: sigue al vehículo del jugador
+    cx = vehicle.getX();
+    cy = vehicle.getY() + 500;
+    cz = vehicle.getZ() + 300;
+    tx = vehicle.getX();
+    ty = vehicle.getY();
+    tz = vehicle.getZ();
+
+    // Cámara de seguimiento de pelota: sigue la pelota en todo momento
+    if (abs(ball.getX() - vehicle.getX()) < 2000 && abs(ball.getY() - vehicle.getY()) < 2000) {
+        cx = ball.getX();
+        cy = ball.getY() + 500;
+        cz = ball.getZ() + 300;
+        tx = ball.getX();
+        ty = ball.getY();
+        tz = ball.getZ();
+    }
+
+    // Cámara de espectador: permite ver la partida desde la perspectiva de otros jugadores
+    // (no implementada en este ejemplo)
+}
+
+int main() {
+    // Crear los objetos del juego
+    Vehicle vehicle("Coche", "Azul", "Llantas 1");
+    Ball ball;
+    Field field;
+
+    // Configurar la cámara
+    float cameraX, cameraY, cameraZ, targetX, targetY, targetZ;
+    updateCamera(cameraX, cameraY, cameraZ, targetX, targetY, targetZ, vehicle, ball);
+    
+    // Bucle principal del juego
+    float time = 0;
+    float dt = 0.01;
+    while (true) {
+        // Actualizar la posición de la pelota
+        ball.updatePosition(dt);
+
+        // Comprobar si la pelota ha entrado en alguna de las porterías
+        if (field.isGoal(ball.getX(), ball.getY(), ball.getZ())) {
+            field.scoreGoal(ball.getX() < 0 ? 2 : 1);
+            ball.setX(0);
+            ball.setY(0);
+            ball.setZ(100);
+            ball.setVelocity(0, 0, 0);
+        }
+
+        // Comprobar si el vehículo ha recogido algún boost pad
+        if (field.isBoostPad(vehicle.getX(), vehicle.getY(), vehicle.getZ())) {
+            vehicle.addExperience(10);
+        }
+
+        // Actualizar la posición de la cámara
+        updateCamera(cameraX, cameraY, cameraZ, targetX, targetY, targetZ, vehicle, ball);
+
+        // Imprimir la información del juego en la consola
+        system("cls");
+        cout << "Rash League" << endl;
+        cout << "Equipo 1: " << field.getScoreTeam1() << endl;
+        cout << "Equipo 2: " << field.getScoreTeam2() << endl;
+        cout << "Nivel: " << vehicle.getLevel() << endl;
+        cout << "Experiencia: " << vehicle.getExperience() << endl;
+        cout << "---------------------------------" << endl;
+        cout << "Posición del vehículo: (" << vehicle.getX() << ", " << vehicle.getY() << ", " << vehicle.getZ() << ")" << endl;
+        cout << "Velocidad de la pelota: (" << ball.getX() << ", " << ball.getY() << ", " << ball.getZ() << ")" << endl;
+        cout << "---------------------------------" << endl;
+        cout << "Controles: acelerar=A, frenar=B, girar=X, saltar=Y, movimientos aéreos=LB/RB" << endl;
+
+        // Esperar un tiempo para mantener el framerate constante
+        time += dt;
+        while (time < 1.0 / 60.0) {
+            // No hacer nada
+        }
+        time -= 1.0 / 60.0;
+    }
+
+    return 0;
+}
